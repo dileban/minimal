@@ -1,0 +1,14 @@
+@import url("https://fonts.googleapis.com/css2?family=Mulish:wght@300;400&display=swap");
+
+* {
+    color: #404040;
+    margin: 0;
+    font-size: 14px;
+    font-family: "Varela Round", sans-serif;
+    font-family: "Mulish", sans-serif;
+}
+
+body {
+    width: 460px;
+    height: 545px;
+}

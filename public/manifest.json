@@ -1,0 +1,47 @@
+{
+  "name": "Minimal",
+  "description": "Save tabs as Github issues",
+  "version": "1.0.0",
+  "manifest_version": 3,
+  "icons": {
+     "16": "logo/less-16.png",
+     "32": "logo/less-32.png",
+     "48": "logo/less-48.png",
+     "64": "logo/less-64.png",
+     "128": "logo/less-128.png",
+     "512": "logo/less-512.png"
+  },
+  "background": {
+     "service_worker": "background.js"
+  },
+  "action": {
+     "default_popup": "index.html",
+     "default_title": "Minimal",
+     "default_icon": {
+        "16": "logo/less-16.png",
+        "32": "logo/less-32.png",
+        "48": "logo/less-48.png",
+        "64": "logo/less-64.png",
+        "128": "logo/less-128.png",
+        "512": "logo/less-512.png"
+      }
+   },
+   "commands": {
+      "_execute_action": {
+        "suggested_key": {
+          "default": "Ctrl+Shift+S",
+          "mac": "MacCtrl+Shift+S"
+        },
+        "description": "Opens Minimal"
+      }
+    },
+  "permissions": [
+     "tabs",
+     "scripting",
+     "storage",
+     "history"
+  ],
+  "host_permissions": [
+     "<all_urls>"  
+  ]  
+}
