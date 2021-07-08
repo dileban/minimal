@@ -13,7 +13,7 @@ Minimal is a solution to the tab hoarding problem many of us face when surfing t
 
 Minimal lets you save tabs as Github issues or comments so you can work through them structurally. Using Github to manage tabs has a number of benefits over traditional bookmarks:
 
--   Github labels let you catagorize content based on topic.
+-   Github labels let you categorize content based on topic.
 -   Save additional information alongside the title and url.
 -   Richer search capabilities for looking up saved content.
 -   Apply a Kanban workflow to support your research work.
