@@ -74,14 +74,6 @@ const newActivatorConfig = () => {
     return config;
 };
 
-const newGithubClient = () => {
-    const ghClient = new GithubClient(
-        PersistentStore.getGithubToken(),
-        PersistentStore.getRepository()
-    );
-    return ghClient;
-};
-
 /**
  * Component representing the Settings dialog. The Settings dialog allows the
  * user to set the remote repository and authentication token to name a few.
@@ -101,6 +93,9 @@ const Settings = () => {
 
     // Option to resync with the remote repository.
     const [resync, setResync] = useState(false);
+
+    // Indicates whether any of the settings was changed by he user.
+    const [dirty, setDirty] = useState(false);
 
     // Custom configuration for the Activator component.
     const [activatorConfig, setActivatorConfig] = useState(
@@ -122,49 +117,66 @@ const Settings = () => {
             default:
                 break;
         }
+        setDirty(true);
         updateActivator({ state: ActivatorState.ACTIVE, label: "Apply" });
     };
 
-    const handleActivation = () => {
+    const handleActivation = async () => {
         try {
-            let [valid, error] = GithubClient.validRepositoryUrl(repository);
-            if (!valid) {
-                throw new Error(error);
-            }
+            if (dirty) {
+                let [valid, error] = GithubClient.validPersonalAccessTokenFormat(ghToken);
+                if (!valid) {
+                    throw new Error(error);
+                }
 
-            [valid, error] = GithubClient.validPersonalAccessToken(ghToken);
-            if (!valid) {
-                throw new Error(error);
-            }
+                [valid, error] = GithubClient.validRepositoryUrlFormat(repository);
+                if (!valid) {
+                    throw new Error(error);
+                }
 
-            PersistentStore.setGithubToken(ghToken);
-            PersistentStore.setRepository(repository);
+                updateActivator({ state: ActivatorState.PENDING, message: "" });
 
-            // If the resync checkbox was selected, refresh the labels and
-            // and assignees stored in the persistent store.
-            if (resync) {
-                const ghClient = newGithubClient();
-                ghClient.getLabels().then(labels => {
+                // If remote repository exists, save access token and repository url
+                const ghClient = new GithubClient(ghToken, repository);
+                const repo = await ghClient.getRemoteRepository();
+                PersistentStore.setGithubToken(ghToken);
+                PersistentStore.setRepository(repository);
+
+                // If the resync checkbox was selected, refresh the labels and
+                // and assignees and persist locally.
+                if (resync) {
+                    const labels = await ghClient.getLabels();
                     PersistentStore.setLabels(labels);
-                    ghClient.getAssignees().then(assignees => {
-                        PersistentStore.setAssignees(assignees);
-                        history.goBack();
-                    });
-                });
-                updateActivator({ state: ActivatorState.PENDING });
-            } else {
-                history.push(Routes.HOME);
+
+                    const assignees = await ghClient.getAssignees();
+                    PersistentStore.setAssignees(assignees);
+                }
             }
+            history.push(Routes.HOME);
         } catch (err) {
+            // Print error to console for error reporting purposes.
             console.error(err);
-            updateActivator({ message: err.message });
+
+            // Replace error messages with more meaningful ones.
+            let message = err.message;
+            switch (err.message) {
+                case "Not Found":
+                    message = "Repository not found";
+                    break;
+                case "Bad credentials":
+                    message = "Bad credentials, use a valid access token";
+                    break;
+                default:
+                    break;
+            }
+            updateActivator({ state: ActivatorState.ACTIVE, message: message });
         }
     };
 
-    const updateActivator = ({ state, label, message }) => {
-        state && (activatorConfig.state = state);
-        label && (activatorConfig.label = label);
-        message && (activatorConfig.message = message);
+    const updateActivator = ({ state = 0, label = "Apply", message = "" }) => {
+        activatorConfig.state = state;
+        activatorConfig.label = label;
+        activatorConfig.message = message;
         setActivatorConfig(() => ({
             ...activatorConfig,
         }));
@@ -209,7 +221,7 @@ const Settings = () => {
                             />
                             <Description
                                 description={
-                                    "(refreshes labels, assignees and other meta-data)"
+                                    "(refreshs labels, assignees and other meta-data)"
                                 }
                             />
                         </CheckboxWrapper>

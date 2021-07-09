@@ -18,12 +18,12 @@ class GithubClient {
         this.repoUrl = repoUrl;
         this.baseUrl = apiBaseUrl;
 
-        let [valid, error] = GithubClient.validRepositoryUrl(repoUrl);
+        let [valid, error] = GithubClient.validRepositoryUrlFormat(repoUrl);
         if (!valid) {
             throw new Error(error);
         }
 
-        [valid, error] = GithubClient.validPersonalAccessToken(accessToken);
+        [valid, error] = GithubClient.validPersonalAccessTokenFormat(accessToken);
         if (!valid) {
             throw new Error(error);
         }
@@ -140,7 +140,7 @@ class GithubClient {
     }
 
     /**
-     * Search through issues in the repository. The result set is limited to 7.
+     * Search through issues in the repository. The result set is limtied to 7.
      *
      * @param {string} query Search string supporting standard Github search qualifiers
      * (see https://bit.ly/3B0PAWK).
@@ -167,6 +167,18 @@ class GithubClient {
     }
 
     /**
+     * Gets the remote repository's metadata.
+     * @returns Meta data about the remote repository.
+     */
+    async getRemoteRepository() {
+        const result = await this.octokit.rest.repos.get({
+            owner: this.org,
+            repo: this.repo,
+        });
+        return result.data;
+    }
+
+    /**
      * Checks if the given url looks like a valid Github repository url. The function first
      * verifies if the url is valid, and then checks to see if the pathname consists of at least
      * 2 components, representing the org name and the repository name respectively.
@@ -175,7 +187,7 @@ class GithubClient {
      * @returns {Array} First element is true if url is valid. If invalid, it is false
      * and includes a second element containing the reason.
      */
-    static validRepositoryUrl(repoUrl) {
+    static validRepositoryUrlFormat(repoUrl) {
         try {
             const url = new URL(repoUrl);
 
@@ -207,7 +219,7 @@ class GithubClient {
      * @returns {Array} First element is true if url is valid. If invalid, it is false
      * and includes a second element containing the reason.
      */
-    static validPersonalAccessToken(token) {
+    static validPersonalAccessTokenFormat(token) {
         if (token.length < 40) {
             return [false, "Access token must be at least 40 characters"];
         }
