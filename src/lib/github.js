@@ -140,7 +140,7 @@ class GithubClient {
     }
 
     /**
-     * Search through issues in the repository. The result set is limtied to 7.
+     * Search through issues in the repository. The result set is limited to 7.
      *
      * @param {string} query Search string supporting standard Github search qualifiers
      * (see https://bit.ly/3B0PAWK).

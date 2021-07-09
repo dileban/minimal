@@ -9,6 +9,7 @@ import Checkbox from "../common/Checkbox";
 import Description from "../common/Description";
 import gear from "../assets/gear.svg";
 import Routes from "../routes";
+import formatError from "../lib/errors";
 
 const Panel = styled.div`
     display: grid;
@@ -115,7 +116,6 @@ const Settings = () => {
                 setResync(e.target.checked);
                 break;
             default:
-                break;
         }
         setDirty(true);
         updateActivator({ state: ActivatorState.ACTIVE, label: "Apply" });
@@ -136,9 +136,9 @@ const Settings = () => {
 
                 updateActivator({ state: ActivatorState.PENDING, message: "" });
 
-                // If remote repository exists, save access token and repository url
+                // If remote repository exists, persist access token and repository url
                 const ghClient = new GithubClient(ghToken, repository);
-                const repo = await ghClient.getRemoteRepository();
+                await ghClient.getRemoteRepository();
                 PersistentStore.setGithubToken(ghToken);
                 PersistentStore.setRepository(repository);
 
@@ -154,21 +154,8 @@ const Settings = () => {
             }
             history.push(Routes.HOME);
         } catch (err) {
-            // Print error to console for error reporting purposes.
             console.error(err);
-
-            // Replace error messages with more meaningful ones.
-            let message = err.message;
-            switch (err.message) {
-                case "Not Found":
-                    message = "Repository not found";
-                    break;
-                case "Bad credentials":
-                    message = "Bad credentials, use a valid access token";
-                    break;
-                default:
-                    break;
-            }
+            const message = formatError(err);
             updateActivator({ state: ActivatorState.ACTIVE, message: message });
         }
     };
@@ -221,7 +208,7 @@ const Settings = () => {
                             />
                             <Description
                                 description={
-                                    "(refreshs labels, assignees and other meta-data)"
+                                    "(refresh labels, assignees and other meta-data)"
                                 }
                             />
                         </CheckboxWrapper>

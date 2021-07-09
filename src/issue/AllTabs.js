@@ -57,7 +57,6 @@ const SaveMode = {
 };
 
 const AllTabs = ({ all, handleUpdate }) => {
-    console.log("alltabs");
     useEffect(() => {
         if (Browser.isContextExtension()) {
             if (

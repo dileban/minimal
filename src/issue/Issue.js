@@ -14,6 +14,7 @@ import Labels from "./Labels";
 import Repository from "./Repository";
 import { MemoryStore, PersistentStore } from "../store";
 import Routes from "../routes";
+import formatError from "../lib/errors";
 
 const Panel = styled.div`
     display: grid;
@@ -112,7 +113,7 @@ const Issue = () => {
             } else {
                 saveCurrentTab();
             }
-            updateActivator(ActivatorState.PENDING);
+            updateActivator({ state: ActivatorState.PENDING });
         } else if (activatorConfig.state === ActivatorState.DONE) {
             // If Activator was in 'DONE' state, close window and
             // unload the extension from view.
@@ -125,37 +126,42 @@ const Issue = () => {
      * NEW, a new issue is created. If command is COMMENT a new comment is
      * appended to the parent issue.
      */
-    const saveCurrentTab = () => {
-        // If Action is 'NEW', create a new Github issue.
-        let promise;
-        const ghClient = newGithubClient();
-        if (command === Action.NEW) {
-            promise = ghClient.createIssue(
-                candidate.title,
-                candidate.comment,
-                candidate.labels,
-                loginUsers(candidate.assignees)
-            );
-        } else if (command === Action.COMMENT) {
-            // Action is 'COMMENT', therefore create a comment 
-            // within the parent issue.
-            let labels = null;
-            let assignees = null;
-            if (candidate.parent.dirty) {
-                labels = candidate.parent.labels;
-                assignees = candidate.parent.assignees;
+    const saveCurrentTab = async () => {
+        try {
+            // If Action is 'NEW', create a new Github issue.
+            let result;
+            const ghClient = newGithubClient();
+            if (command === Action.NEW) {
+                result = await ghClient.createIssue(
+                    candidate.title,
+                    candidate.comment,
+                    candidate.labels,
+                    loginUsers(candidate.assignees)
+                );
+            } else if (command === Action.COMMENT) {
+                // Action is 'COMMENT', therefore create a comment 
+                // within the parent issue.
+                let labels = null;
+                let assignees = null;
+                if (candidate.parent.dirty) {
+                    labels = candidate.parent.labels;
+                    assignees = candidate.parent.assignees;
+                }
+                result = await ghClient.updateIssue(
+                    candidate.parent.number,
+                    candidate.comment,
+                    labels,
+                    loginUsers(assignees)
+                );
             }
-            promise = ghClient.updateIssue(
-                candidate.parent.number,
-                candidate.comment,
-                labels,
-                loginUsers(assignees)
-            );
-        }
-        promise.then((result) => {
             // Set external link to the parent issue.
-            updateActivator(ActivatorState.DONE, "Close", result.url);
-        });
+            updateActivator({ state: ActivatorState.DONE, label: "Close", link: result.url });
+        }
+        catch (err) {
+            console.error(err);
+            const message = formatError(err);
+            updateActivator({ state: ActivatorState.DONE, label: "Close", message: message });
+        }
     }
 
     /**
@@ -165,62 +171,154 @@ const Issue = () => {
      */
     const saveAllTabs = async () => {
         let tabs = await Browser.getAllTabs(all.windowMode === WindowMode.CURRENT);
-
-        // If save mode is 'SINGLE', create a parent issue with first tab
-        // and add the remaining tabs as comments
-        const ghClient = newGithubClient();
         if (all.saveMode === SaveMode.SINGLE) {
+            saveAllTabsAsSingleIssue(tabs);
+        } else {
+            saveAllTabsAsMultipleIssues(tabs);
+        }
+    }
 
-            // Extract title and comment from first tab and create issue
-            const page = await tabs[0].getPage();
-            const title = page.title;
-            const comment = page.toMarkdown();
-            const result = await ghClient.createIssue(
-                title,
-                comment,
-                all.labels,
-                loginUsers(all.assignees)
-            );
-
-            // Extract title and comment from remaining tabs and create 
-            // individual comments
-            tabs = tabs.slice(1);
-            const promises = [];
-            tabs.forEach(async tab => {
-                const page = await tab.getPage();
-                const comment = page.toMarkdown();
-                const promise = ghClient.updateIssue(
-                    result.number,
-                    comment
-                );
+    /**
+     * Saves all tabs under a single issue. The function creates a parent 
+     * issue with first tab and add the remaining tabs as comments.
+     * @param {Object[]} tabs A list of browser tabs.
+     */
+    const saveAllTabsAsSingleIssue = async (tabs) => {
+        try {
+            // Retrieve pages from all tab instances. If the retrieval was 
+            // successful then proceed to update the issue with a series of 
+            // comments, one per page.
+            let promises = [];
+            tabs.forEach(tab => {
+                // Promise to retrieve page.
+                const promise = new Promise((resolve, reject) => {
+                    tab.getPage()
+                        .then(page => {
+                            resolve(page);
+                        })
+                        .catch(err => reject(err));
+                });
                 promises.push(promise);
             });
-            Promise.all(promises).then(() => {
-                // Set external link to the parent issue
-                updateActivator(ActivatorState.DONE, "Close", result.url);
-            });
-        } else {
-            // Save mode is 'MULTI', therefore create individual issues 
-            // for each tab
-            const promises = [];
-            tabs.forEach(async tab => {
-                const page = await tab.getPage();
+
+            // Retrieve all pages and, if successful, proceed to
+            // create comments.
+            Promise.all(promises).then(pages => {
+                // Extract title and comment from first tab and create issue.
+                const page = pages[0];
                 const title = page.title;
                 const comment = page.toMarkdown();
-                const promise = ghClient.createIssue(
+                let result;
+                const ghClient = newGithubClient();
+                ghClient.createIssue(
                     title,
                     comment,
                     all.labels,
                     loginUsers(all.assignees)
-                );
-                promises.push(promise);
-            });
-            Promise.all(promises).then(() => {
-                // Set external link to root of Github Issues page
-                const link = Url.join(ghClient.getRepositoryUrl(), "issues");
-                updateActivator(ActivatorState.DONE, "Close", link);
+                ).then(result => {
+                    // Save all remaining pages as comments in the parent issue.
+                    promises = [];
+                    pages = pages.slice(1);
+                    pages.forEach(page => {
+                        // Promise to update issue with new comment.
+                        const promise = new Promise((resolve, reject) => {
+                            const comment = page.toMarkdown();
+                            ghClient.updateIssue(
+                                result.number,
+                                comment
+                            )
+                                .then(result => resolve(result))
+                                .catch(err => reject(err));
+                        });
+                        promises.push(promise);
+                    });
+
+                    Promise.all(promises).then(() => {
+                        // Set external link to the parent issue
+                        updateActivator({ state: ActivatorState.DONE, label: "Close", link: result.url });
+                    }).catch(err => {
+                        handleError(err);
+                    });
+                }).catch(err => {
+                    handleError(err);
+                });
+            }).catch(err => {
+                handleError(err);
             });
         }
+        catch (err) {
+            handleError(err);
+        }
+    }
+
+    /**
+     * Saves all tabs as multiple issues, one per tab. 
+     * @param {Object[]} tabs A list of browser tabs.
+     */
+    const saveAllTabsAsMultipleIssues = (tabs) => {
+        try {
+            // Retrieve pages from all tab instances. If the retrieval was 
+            // successful then proceed to create new issues, one per page.
+            let promises = [];
+            tabs.forEach(tab => {
+                // Promise to retrieve page.
+                const promise = new Promise((resolve, reject) => {
+                    tab.getPage()
+                        .then(page => {
+                            resolve(page);
+                        })
+                        .catch(err => reject(err));
+                });
+                promises.push(promise);
+            });
+
+            // Retrieve all pages and, if successful, proceed to
+            // create comments
+            const ghClient = newGithubClient();
+            Promise.all(promises).then(pages => {
+                promises = [];
+                pages.forEach(page => {
+                    // Promise to update issue with new comment.
+                    const promise = new Promise((resolve, reject) => {
+                        const title = page.title;
+                        const comment = page.toMarkdown();
+                        ghClient.createIssue(
+                            title,
+                            comment,
+                            all.labels,
+                            loginUsers(all.assignees)
+                        )
+                            .then(result => resolve(result))
+                            .catch(err => reject(err));
+                    })
+                    promises.push(promise);
+                });
+                Promise.all(promises).then(() => {
+                    // Set external link to root of Github Issues page
+                    const link = Url.join(ghClient.getRepositoryUrl(), "issues");
+                    updateActivator({ state: ActivatorState.DONE, label: "Close", link: link });
+                }).catch(err => {
+                    handleError(err);
+                });
+            }).catch(err => {
+                handleError(err);
+            });
+        }
+        catch (err) {
+            handleError(err);
+        }
+    }
+
+    /**
+     * Handles and error condition. Logs the error to the console for 
+     * reporting purposes, converts the error into a more user friendly
+     * and actionable form, and updates the activator.
+     * @param {Object} err An Error instance.
+     */
+    const handleError = (err) => {
+        console.error(err);
+        const message = formatError(err);
+        updateActivator({ state: ActivatorState.DONE, label: "Close", message: message });
     }
 
     /**
@@ -270,7 +368,6 @@ const Issue = () => {
                         : SaveMode.SINGLE;
                     break;
                 default:
-                    break;
             }
         }
         setAll(all);
@@ -292,7 +389,6 @@ const Issue = () => {
             case Routes.SEARCH:
                 break;
             default:
-                break;
         }
         setCandidate(candidate);
         history.push(route, state);
@@ -327,7 +423,6 @@ const Issue = () => {
                         (all.assignees = location.state.assignees);
                     break;
                 default:
-                    break;
             }
             history.replace(Routes.HOME, null);
         }
@@ -350,7 +445,6 @@ const Issue = () => {
                 labels = all.labels;
                 break;
             default:
-                break;
         }
         return labels;
     };
@@ -372,46 +466,50 @@ const Issue = () => {
                 assignees = all.assignees;
                 break;
             default:
-                break;
         }
         return assignees;
     };
 
-    const updateActivator = (state, label, link) => {
+    const updateActivator = ({ state = 0, label = "Save", message = "", link = null }) => {
         activatorConfig.state = state;
-        label && (activatorConfig.label = label);
-        link && (activatorConfig.link = link);
+        activatorConfig.label = label;
+        activatorConfig.message = message;
+        activatorConfig.link = link;
         setActivatorConfig(() => ({
             ...activatorConfig,
         }));
     };
 
     useEffect(() => {
-        if (command === Action.NEW || command === Action.COMMENT) {
-            if (!candidate.title || !candidate.comment) {
-                Browser.getActiveTab().then(tab => {
-                    tab.getPage().then(page => {
-                        candidate.title = page.title;
-                        candidate.comment = page.toMarkdown();
-                        setCandidate(candidate);
-                    });
-                });
-            }
-        }
-
-        if (command === Action.COMMENT) {
-            if (recentIssues.length === 0) {
-                const ghClient = newGithubClient();
-                ghClient.getRecentIssues().then(issues => {
-                    issues.push({ number: -1, title: "[ Search ]" });
-                    // Associate the current candidate comment with a
-                    // default parent issue
-                    candidate.parent = issues[0];
+        const processCommand = async () => {
+            if (command === Action.NEW || command === Action.COMMENT) {
+                if (!candidate.title || !candidate.comment) {
+                    const tab = await Browser.getActiveTab();
+                    const page = await tab.getPage()
+                    candidate.title = page.title;
+                    candidate.comment = page.toMarkdown();
                     setCandidate(candidate);
-                    setRecentIssues(issues);
-                });
+                }
+            }
+            if (command === Action.COMMENT) {
+                if (recentIssues.length === 0) {
+                    try {
+                        const ghClient = newGithubClient();
+                        const issues = await ghClient.getRecentIssues();
+                        issues.push({ number: -1, title: "[ Search ]" });
+                        // Associate the current candidate comment with a
+                        // default parent issue
+                        candidate.parent = issues[0];
+                        setCandidate(candidate);
+                        setRecentIssues(issues);
+                    }
+                    catch (err) {
+                        handleError(err);
+                    };
+                }
             }
         }
+        processCommand();
         processRouteState();
     }, [command]); // eslint-disable-line react-hooks/exhaustive-deps
 
