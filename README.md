@@ -28,13 +28,19 @@ Minimal is not available on the Chrome Web Store and might be added in due cours
 
 ### Manual
 
-TODO
+To install Minimal manually download the [latest](https://github.com/dileban/minimal/releases) release package or create your own build from source. Follow these steps to install the extension:
+
+1.  Open the _Extensions_ panel in your browser
+1.  Turn on _Developer mode_
+1.  Click on _Load unpacked_ and browse to the _build_ folder
+1.  Select the _build_ folder to install
+1.  Optionally pin the new extension so that it is visible at all times
 
 ### Authentication and Security Considerations
 
 When the extension is activated for the first time you will be prompted for a Personal Access Token (PAT). Minimal uses a PAT to authenticate with Github's APIs. To create a PAT follow [these](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token) instructions.
 
-The limition in using PATs is that they have broad access. Github doesn't allow scoping PATs to an individual repository although this might be addressed in future (see [#184](https://github.com/github/roadmap/projects/1#card-58542173) on Github's roadmap).
+The limitation in using PATs is that they have broad access. Github doesn't allow scoping PATs to an individual repository although this might be addressed in future (see [#184](https://github.com/github/roadmap/projects/1#card-58542173) on Github's roadmap).
 
 **NOTE**: Never trust code even if its source is open unless you personally inspect the code, or a snapshot of the code has been audited and signed-off by a trusted entity. Although this code uses a PAT for the sole purpose of creating issues and querying meta data from the _specified_ repository, the author holds no responsibilities for any breaches that might occur as a result of using this extension.
 
@@ -52,7 +58,7 @@ The extension relies on the following permissions:
 Minimal can be activated by:
 
 -   Clicking on the extension's icon on the top right corner of the browser.
--   Using a keyboard shortcut: `Ctrl+Shitf+S` on Linux and Windows, and `Command+Shift+S` on MacOS.
+-   Using a keyboard shortcut: `Ctrl+Shift+S` on Linux and Windows, and `Command+Shift+S` on MacOS.
 
 When the extension is activated for the first time, you will be promoted to enter a valid PAT and repository URL.
 
@@ -74,7 +80,7 @@ Use the _Comment_ option to save a tab as a comment to an existing issue. The fo
 
 <img src="./assets/demo-new-comment.png" width="450">
 
-### Saving mulitple tabs at once
+### Saving multiple tabs at once
 
 Sometimes it is helpful to save multiple tabs at once rather than having to save each tab individually. This is often the case when you find relevant content pertaining to a certain topic of interest.
 
