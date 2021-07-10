@@ -208,7 +208,6 @@ const Issue = () => {
                 const page = pages[0];
                 const title = page.title;
                 const comment = page.toMarkdown();
-                let result;
                 const ghClient = newGithubClient();
                 ghClient.createIssue(
                     title,
