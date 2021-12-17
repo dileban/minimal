@@ -47,9 +47,13 @@ const newGithubClient = () => {
 };
 
 const loginUsers = assignees => {
-    return assignees.map(assignee => {
-        return assignee.login;
-    });
+    if (assignees === null) {
+        return null
+    } else {
+        return assignees.map(assignee => {
+            return assignee.login;
+        });
+    }
 };
 
 /**

@@ -82,7 +82,8 @@ class GithubClient {
             body: comment,
         });
 
-        // If labels and assignees have both been passed, update these on issue
+        // If labels and assignees have both been passed, update these on the issue.
+        // Note that leaving either of these arguments 'null' will remove it from the issue.
         if (labels && assignees) {
             await this.octokit.rest.issues.update({
                 owner: this.org,
