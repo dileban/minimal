@@ -189,22 +189,18 @@ class Page {
             .filter(
                 key =>
                     // Ignore these attributes as they are included above.
-                    !["title", "description", "image", "url", "icon"].includes(
+                    !["title", "description", "image", "icon"].includes(
                         key
                     ) && this.meta[key]
             )
             .map(
                 key =>
-                    "* **" +
-                    // Uppercase key's first letter
-                    key.charAt(0).toUpperCase() +
-                    key.slice(1) +
-                    "**: " +
-                    this.meta[key]
+                    Page.formatMetaDataItem(key, String(this.meta[key]))
             )
+            .sort()
             .join("\n");
         data &&
-            (markdown += "\n### Metadata \n\n" + data);
+            (markdown += "\n**About this bookmark:**\n\n" + data);
         return markdown;
     }
 
@@ -218,6 +214,26 @@ class Page {
             .map(key => key + ": " + this.meta[key])
             .join("\n");
         return content;
+    }
+
+    static formatMetaDataItem(key, value) {
+        let prettyKey = key;
+        let prettyValue = value;
+        switch (key) {
+            case "keywords":
+                prettyValue = value.split(",").map(e => "`" + e + "`").join(", ");
+                break;
+            case "provider":
+                prettyKey = "published on";
+                break;
+            case "type":
+                prettyKey = "format";
+                prettyValue = value.split(".")[0];
+                prettyValue = prettyValue.charAt(0).toUpperCase() + prettyValue.slice(1);
+                break;
+        }
+        prettyKey = prettyKey.charAt(0).toUpperCase() + prettyKey.slice(1);
+        return "* **" + prettyKey + "**: " + prettyValue;
     }
 }
 
