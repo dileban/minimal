@@ -1,6 +1,6 @@
 {
    "name": "Minimal",
-   "description": "Save tabs as Github issues",
+   "description": "Turn your tabs into Github issues",
    "version": "1.0.1",
    "manifest_version": 3,
    "icons": {
