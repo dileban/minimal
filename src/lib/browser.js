@@ -1,4 +1,4 @@
-import { getMetadata } from "page-metadata-parser";
+import { getMetadata } from "./metadata";
 
 /* global chrome */
 
@@ -35,7 +35,7 @@ class Browser {
 
     /**
      * Creates a Document object containing only the head node of a web page. This is
-     * memory efficient when we are only interested in the head and its meta tags.
+     * memory efficient since we are only interested in the head and its meta tags.
      * @param {Object} innerHTML Inner HTML representing the head element.
      * @returns {Object} A Document object containing only the head node.
      */
@@ -189,7 +189,7 @@ class Page {
             .filter(
                 key =>
                     // Ignore these attributes as they are included above.
-                    !["title", "description", "image", "icon"].includes(
+                    !["title", "description", "image"].includes(
                         key
                     ) && this.meta[key]
             )
