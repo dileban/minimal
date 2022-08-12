@@ -1,11 +1,8 @@
-# This workflow will build the latest tagged version and create a release.
-
-name: Minimal Build & Release
+name: Minimal Build
 
 on:
     push:
-        tags:
-            - "v*.*.*"
+        branches: ["master"]
 
 jobs:
     release:
@@ -14,9 +11,6 @@ jobs:
         strategy:
             matrix:
                 node-version: [18.x]
-
-        env:
-            RELEASE_NAME: minimal-${{ github.ref_name }}
 
         steps:
             - uses: actions/checkout@v2
@@ -28,18 +22,4 @@ jobs:
             - name: Install dependencies
               run: npm install
             - name: Build
-              run: npm run build
-            - name: Package
-              run: |
-                  mv build $RELEASE_NAME
-                  cp LICENSE $RELEASE_NAME
-                  zip -r ${RELEASE_NAME}.zip $RELEASE_NAME
-                  ls -al
-            - name: Release
-              uses: softprops/action-gh-release@v1
-              if: startsWith(github.ref, 'refs/tags/')
-              with:
-                  name: ${{ env.RELEASE_NAME }}
-                  files: |
-                      ${{ env.RELEASE_NAME }}.zip
-                      LICENSE
+              run: NODE_OPTIONS=--openssl-legacy-provider npm run build
