@@ -231,6 +231,7 @@ class Page {
                 prettyValue = value.split(".")[0];
                 prettyValue = prettyValue.charAt(0).toUpperCase() + prettyValue.slice(1);
                 break;
+            default:
         }
         prettyKey = prettyKey.charAt(0).toUpperCase() + prettyKey.slice(1);
         return "* **" + prettyKey + "**: " + prettyValue;
