@@ -1,7 +1,7 @@
 {
    "name": "Minimal",
    "description": "Turn your tabs into Github issues",
-   "version": "1.0.1",
+   "version": "1.0.2",
    "manifest_version": 3,
    "icons": {
       "16": "logo/less-16.png",
