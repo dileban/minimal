@@ -121,9 +121,9 @@ class Tab {
                 });
                 doc = Browser.createDocumentFromHead(head[0].result);
             }
-            return new Page(this.chromeTab.url, doc);
+            return new Page(this.chromeTab.url, this.chromeTab.title, doc);
         }
-        return new Page(window.location.origin, window.document);
+        return new Page(window.location.origin, this.chromeTab.title, window.document);
     }
 }
 
@@ -139,8 +139,9 @@ class Page {
      * @param {string} url The url of the web page.
      * @param {Object} document A valid DOM representation of the web page.
      */
-    constructor(url, document) {
+    constructor(url, tabTitle, document) {
         this.url = url;
+        this.tabTitle = tabTitle;
         this.document = document;
         this.metadata = getMetadata(document, url);
     }
@@ -152,6 +153,8 @@ class Page {
     get title() {
         if (this.meta.title)
             return this.meta.title;
+        else if (this.tabTitle)
+            return this.tabTitle;
         else
             return this.meta.url;
     }
